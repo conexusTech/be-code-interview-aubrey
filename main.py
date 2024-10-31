@@ -16,8 +16,7 @@ app = FastAPI()
 api_token = os.getenv("HUGGINGFACEHUB_API_TOKEN")
 
 # Initialize the HuggingFaceHub model with the API token
-# model = HuggingFaceHub(repo_id="distilbert-base-uncased-distilled-squad", model_kwargs={"temperature": 0.3, "max_length": 50}, huggingfacehub_api_token=api_token)
-model = HuggingFaceHub(repo_id="gpt2", model_kwargs={"temperature": 0.3, "max_length": 20}, huggingfacehub_api_token=api_token)
+model = HuggingFaceHub(repo_id="gpt2", model_kwargs={"temperature": 0.1, "max_length": 20}, huggingfacehub_api_token=api_token)
 
 
 # Define request and response data models
