@@ -1,10 +1,7 @@
-import os
-from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from transformers import AutoModelForCausalLM, AutoTokenizer
-import torch
 from functools import lru_cache
 
 app = FastAPI()
