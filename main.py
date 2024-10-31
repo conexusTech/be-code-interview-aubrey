@@ -1,48 +1,39 @@
-
 import os
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from langchain_community.llms import HuggingFaceHub
+from transformers import AutoModelForCausalLM, AutoTokenizer
+import torch
 from functools import lru_cache
 
-# Load environment variables from the .env file
-load_dotenv()
-
-# Initialize the FastAPI app
 app = FastAPI()
 
-# Access the API token
-api_token = os.getenv("HUGGINGFACEHUB_API_TOKEN")
+model_name = "microsoft/DialoGPT-medium"
+tokenizer = AutoTokenizer.from_pretrained(model_name)
+model = AutoModelForCausalLM.from_pretrained(model_name)
 
-# Initialize the HuggingFaceHub model with the API token
-model = HuggingFaceHub(repo_id="gpt2", model_kwargs={"temperature": 0.1, "max_length": 20}, huggingfacehub_api_token=api_token)
-
-
-# Define request and response data models
 class QueryRequest(BaseModel):
     query: str
 
 class QueryResponse(BaseModel):
     response: str
 
-# LRU cache to store responses for repeat queries
 @lru_cache(maxsize=100)
-def cached_response(query: str) -> str:
-    # Apply basic prompt engineering
-    prompt = f"Answer this in one sentence: {query}"
-    return model(prompt)
+def cached_response(prompt: str) -> str:
+    context = "You are a helpful assistant."
+    full_prompt = f"{context}\nUser: {prompt}\nAssistant:"
+    
+    input_ids = tokenizer.encode(full_prompt + tokenizer.eos_token, return_tensors='pt')
+    response_ids = model.generate(input_ids, max_length=100, pad_token_id=tokenizer.eos_token_id)
+    
+    response = tokenizer.decode(response_ids[:, input_ids.shape[-1]:][0], skip_special_tokens=True)
+    return response.strip()
 
-# API endpoint to generate response
 @app.post("/query", response_model=QueryResponse)
 async def generate_response(request: QueryRequest):
-    query = request.query
     try:
-        response_text = cached_response(query)
-        # response_text = response_text.split("\n")[0]
-
+        response_text = cached_response(request.query)
         return QueryResponse(response=response_text)
     except Exception as e:
         raise HTTPException(status_code=500, detail="An error occurred while generating the response.")
-
-# To run the app: uvicorn main:app --reload
